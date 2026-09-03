@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-surface-900 text-white antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  code, pre, kbd {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+}
+
+@layer components {
+  /* Glass card */
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent;
+  }
+
+  /* Status pill */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .status-ok {
+    @apply status-pill bg-emerald-500/20 text-emerald-300 border border-emerald-500/30;
+  }
+
+  .status-error {
+    @apply status-pill bg-red-500/20 text-red-300 border border-red-500/30;
+  }
+
+  .status-loading {
+    @apply status-pill bg-brand-500/20 text-brand-300 border border-brand-500/30;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+           bg-brand-600 hover:bg-brand-500 text-white
+           transition-all duration-200 hover:shadow-lg hover:shadow-brand-500/25
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Code block */
+  .code-block {
+    @apply bg-surface-800 border border-white/10 rounded-xl p-4 font-mono text-sm
+           text-brand-200 overflow-x-auto;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in   { animation: fadeIn  0.4s ease-out; }
+  .animate-slide-up  { animation: slideUp 0.4s ease-out; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { @apply bg-surface-800; }
+::-webkit-scrollbar-thumb { @apply bg-brand-600 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-brand-500; }
