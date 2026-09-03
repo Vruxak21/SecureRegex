@@ -52,8 +52,37 @@ class InputTooLongError(ValidationError):
 # ── Lexer / Parser ───────────────────────────────────────────────────────────
 
 class LexerError(SecureRegexError):
-    """Raised when the lexer encounters an unrecognised token."""
+    """Raised when the lexer encounters an unrecognised or invalid token.
+
+    Extra attributes
+    ----------------
+    position : int | None
+        1-indexed column number where the error occurred.
+    char : str | None
+        The offending character (single char or escape sequence).
+    """
+
     error_code = "LEXER_ERROR"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        position: int | None = None,
+        char: str | None = None,
+        detail: str | None = None,
+    ) -> None:
+        super().__init__(message, detail=detail)
+        self.position = position
+        self.char = char
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        if self.position is not None:
+            d["position"] = {"line": 1, "column": self.position}
+        if self.char is not None:
+            d["char"] = self.char
+        return d
 
 
 class ParseError(SecureRegexError):
