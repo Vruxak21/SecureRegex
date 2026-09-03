@@ -86,8 +86,31 @@ class LexerError(SecureRegexError):
 
 
 class ParseError(SecureRegexError):
-    """Raised when the parser detects a syntax error."""
+    """Raised when the parser detects a syntax error.
+
+    Extra attributes
+    ----------------
+    position : int | None
+        1-indexed column number where the error was detected.
+    """
+
     error_code = "PARSE_ERROR"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        position: int | None = None,
+        detail: str | None = None,
+    ) -> None:
+        super().__init__(message, detail=detail)
+        self.position = position
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        if self.position is not None:
+            d["position"] = {"line": 1, "column": self.position}
+        return d
 
 
 # ── Semantic analysis ────────────────────────────────────────────────────────
