@@ -259,21 +259,28 @@ class TestCharacterClasses:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestInvalidRange:
+    """Inverted ranges like [z-a] are SYNTACTICALLY valid.
+    The parser now accepts them; SEM001 in the semantic analyser catches them.
+    """
 
-    def test_inverted_range_raises(self):
-        with pytest.raises(ParseError) as exc_info:
-            pp("[z-a]")
-        assert exc_info.value.error_code == "PARSE_ERROR"
+    def test_inverted_range_parses_without_error(self):
+        """[z-a] must NOT raise ParseError — that is semantic analysis's job."""
+        node = pp("[z-a]")
+        from app.ast import CharClassNode
+        assert isinstance(node, CharClassNode)
 
-    def test_inverted_range_mentions_chars(self):
-        with pytest.raises(ParseError) as exc_info:
-            pp("[z-a]")
-        assert "z" in exc_info.value.message and "a" in exc_info.value.message
+    def test_inverted_range_has_correct_range_values(self):
+        from app.ast import CharClassNode, ClassRange
+        node = pp("[z-a]")
+        assert isinstance(node, CharClassNode)
+        assert node.ranges[0].start == "z"
+        assert node.ranges[0].end == "a"
 
-    def test_inverted_range_has_position(self):
-        with pytest.raises(ParseError) as exc_info:
-            pp("[z-a]")
-        assert exc_info.value.position is not None
+    def test_inverted_range_start_pos_set(self):
+        from app.ast import CharClassNode
+        node = pp("[z-a]")
+        # start_pos of 'z' is column 2 (inside the bracket at col 1)
+        assert node.ranges[0].start_pos == 2
 
 
 # ─────────────────────────────────────────────────────────────────────────────

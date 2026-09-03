@@ -31,7 +31,7 @@ ASTNode (ABC)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 # ── Abstract base ──────────────────────────────────────────────────────────────
@@ -68,7 +68,12 @@ class LiteralNode(ASTNode):
 
 @dataclass(frozen=True)
 class DotNode(ASTNode):
-    """The ``.`` wildcard — matches any single character."""
+    """The ``.`` wildcard — matches any single character.
+
+    Flagged as SEM003 by the semantic analyser (not in v1 supported syntax).
+    """
+
+    position: int | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict:
         return {"type": "Dot"}
@@ -94,10 +99,16 @@ class ClassRange:
 
     A single character ``'a'`` is stored as ``ClassRange(start='a', end='a')``.
     A range ``'a'-'z'`` is stored as ``ClassRange(start='a', end='z')``.
+
+    ``start_pos`` carries the 1-indexed column of the *start* character in the
+    original source (for precise SEM001 error reporting).  It is excluded from
+    ``__eq__`` and ``__hash__`` so that test assertions can compare ranges by
+    value without caring about source location.
     """
 
-    start: str  # single Unicode character
-    end:   str  # single Unicode character (≥ start in codepoint order)
+    start:     str
+    end:       str
+    start_pos: int | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict:
         return {"start": self.start, "end": self.end}
@@ -114,15 +125,14 @@ class CharClassNode(ASTNode):
 
     Attributes
     ----------
-    negate : bool
-        True when the class is negated (``[^…]``).
-    ranges : tuple[ClassRange, ...]
-        Ordered list of ranges/single-chars inside the brackets.
-        Using a tuple keeps the node hashable.
+    negate   : bool                  – True when the class is negated ``[^…]``.
+    ranges   : tuple[ClassRange, …]  – Ranges/single-chars inside the brackets.
+    position : int | None            – Column of the opening ``[`` (compare=False).
     """
 
-    negate: bool
-    ranges: tuple[ClassRange, ...]
+    negate:   bool
+    ranges:   tuple[ClassRange, ...]
+    position: int | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict:
         return {
@@ -146,7 +156,8 @@ class CharClassNode(ASTNode):
 class StarNode(ASTNode):
     """Kleene star ``*`` — zero or more repetitions."""
 
-    child: ASTNode
+    child:    ASTNode
+    position: int | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict:
         return {"type": "Star", "child": self.child.to_dict()}
@@ -159,7 +170,8 @@ class StarNode(ASTNode):
 class PlusNode(ASTNode):
     """One-or-more ``+``."""
 
-    child: ASTNode
+    child:    ASTNode
+    position: int | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict:
         return {"type": "Plus", "child": self.child.to_dict()}
@@ -172,7 +184,8 @@ class PlusNode(ASTNode):
 class QuestionNode(ASTNode):
     """Zero-or-one ``?``."""
 
-    child: ASTNode
+    child:    ASTNode
+    position: int | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict:
         return {"type": "Question", "child": self.child.to_dict()}

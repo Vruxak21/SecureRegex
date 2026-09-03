@@ -213,9 +213,9 @@ class Parser:
         while self._peek_type() in {TokenType.STAR, TokenType.PLUS, TokenType.QUESTION}:
             q = self._consume()
             match q.type:
-                case TokenType.STAR:     node = StarNode(node)
-                case TokenType.PLUS:     node = PlusNode(node)
-                case TokenType.QUESTION: node = QuestionNode(node)
+                case TokenType.STAR:     node = StarNode(node,     position=q.column)
+                case TokenType.PLUS:     node = PlusNode(node,     position=q.column)
+                case TokenType.QUESTION: node = QuestionNode(node, position=q.column)
 
         return node
 
@@ -267,7 +267,7 @@ class Parser:
             # ── Wildcard dot ──────────────────────────────────────────────
             case TokenType.DOT:
                 self._consume()
-                return DotNode()
+                return DotNode(position=tok.column)
 
             # ── Anything else is unexpected ───────────────────────────────
             case _:
@@ -317,26 +317,21 @@ class Parser:
                 self._consume(TokenType.DASH)
 
                 if self._peek_type() is TokenType.CHAR:
-                    # Well-formed range
+                    # Well-formed range — validity (start ≤ end) is checked
+                    # by the semantic analyser (SEM001), not here.
                     end_tok = self._consume(TokenType.CHAR)
-                    if ord(end_tok.value) < ord(start_tok.value):
-                        raise ParseError(
-                            f"Invalid character range '{start_tok.value}-{end_tok.value}' "
-                            f"at column {start_tok.column}: "
-                            "start must be ≤ end in Unicode codepoint order.",
-                            position=start_tok.column,
-                            detail=(
-                                f"'{start_tok.value}' (U+{ord(start_tok.value):04X}) "
-                                f"> '{end_tok.value}' (U+{ord(end_tok.value):04X})."
-                            ),
-                        )
-                    ranges.append(ClassRange(start_tok.value, end_tok.value))
+                    ranges.append(ClassRange(
+                        start_tok.value, end_tok.value,
+                        start_pos=start_tok.column,
+                    ))
                 else:
                     # Trailing dash — treat char and dash as two literals
-                    ranges.append(ClassRange(start_tok.value, start_tok.value))
+                    ranges.append(ClassRange(start_tok.value, start_tok.value,
+                                             start_pos=start_tok.column))
                     ranges.append(ClassRange("-", "-"))
             else:
-                ranges.append(ClassRange(start_tok.value, start_tok.value))
+                ranges.append(ClassRange(start_tok.value, start_tok.value,
+                                         start_pos=start_tok.column))
 
         # Unclosed bracket
         if self._peek_type() is TokenType.EOF:
@@ -355,7 +350,11 @@ class Parser:
             )
 
         self._consume(TokenType.RBRACKET)
-        return CharClassNode(negate=negate, ranges=tuple(ranges))
+        return CharClassNode(
+            negate=negate,
+            ranges=tuple(ranges),
+            position=open_tok.column,
+        )
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
