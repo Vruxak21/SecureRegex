@@ -1,0 +1,157 @@
+{
+  "_comment": "SecureRegex Phase 11 — Regex Battery Fixtures. Used by test_e2e.py for end-to-end pipeline validation.",
+  "safe_patterns": [
+    {
+      "id": "safe_01",
+      "regex": "(a|b)*abb",
+      "description": "Classic Dragon Book DFA example — recognises strings ending in 'abb'",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["abb", "aabb", "babb", "ababb", "abababb"],
+        "rejects":  ["", "ab", "a", "b", "abba", "ba"]
+      }
+    },
+    {
+      "id": "safe_02",
+      "regex": "[a-z]+",
+      "description": "One or more lowercase letters — char class repetition",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["a", "hello", "world", "z"],
+        "rejects":  ["", "A", "1", "hello1"]
+      }
+    },
+    {
+      "id": "safe_03",
+      "regex": "ab|cb",
+      "description": "Simple alternation — known 5→3 minimization case",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "dfa_reduction_pct_ge": 0,
+        "accepts": ["ab", "cb"],
+        "rejects":  ["", "a", "b", "ac", "abc"]
+      }
+    },
+    {
+      "id": "safe_04",
+      "regex": "[0-9]*",
+      "description": "Zero or more digits",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["", "0", "123", "9999"],
+        "rejects":  ["a", "12a", "-1"]
+      }
+    },
+    {
+      "id": "safe_05",
+      "regex": "a?b",
+      "description": "Optional 'a' followed by mandatory 'b'",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["b", "ab"],
+        "rejects":  ["", "a", "aab", "ba"]
+      }
+    },
+    {
+      "id": "safe_06",
+      "regex": "(a|b)+",
+      "description": "One or more a or b — disjoint first chars, no overlap",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["a", "b", "ab", "ba", "aba"],
+        "rejects":  ["", "c"]
+      }
+    },
+    {
+      "id": "safe_07",
+      "regex": "a*b*",
+      "description": "Zero or more a followed by zero or more b",
+      "expected": {
+        "security_risk": "NONE",
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["", "a", "b", "ab", "aab", "abb", "aabb"],
+        "rejects":  ["ba", "aba"]
+      }
+    }
+  ],
+  "risky_patterns": [
+    {
+      "id": "risky_01",
+      "regex": "(a+)+",
+      "description": "Classic ReDoS — nested quantifier, SEC001",
+      "expected": {
+        "security_risk": "HIGH",
+        "rule_ids_include": ["SEC001"],
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["a", "aa", "aaa"],
+        "rejects":  ["", "b"]
+      }
+    },
+    {
+      "id": "risky_02",
+      "regex": "(a*)*",
+      "description": "Nested star — outer star wraps inner star, SEC001",
+      "expected": {
+        "security_risk": "HIGH",
+        "rule_ids_include": ["SEC001"],
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["", "a", "aa"],
+        "rejects":  ["b"]
+      }
+    },
+    {
+      "id": "risky_03",
+      "regex": "(a|aa)+",
+      "description": "Overlapping alternation — 'a' is prefix of 'aa', SEC002",
+      "expected": {
+        "security_risk": "HIGH",
+        "rule_ids_include": ["SEC002"],
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["a", "aa", "aaa"],
+        "rejects":  ["", "b"]
+      }
+    },
+    {
+      "id": "risky_04",
+      "regex": "(a?)+",
+      "description": "Nullable repetition under plus — zero-width loop risk, SEC003",
+      "expected": {
+        "security_risk": "MEDIUM",
+        "rule_ids_include": ["SEC003"],
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["", "a", "aa"],
+        "rejects":  ["b"]
+      }
+    },
+    {
+      "id": "risky_05",
+      "regex": "([a-z]+)+",
+      "description": "Char class with nested quantifier — HIGH risk, SEC001",
+      "expected": {
+        "security_risk": "HIGH",
+        "rule_ids_include": ["SEC001"],
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["a", "abc", "z"],
+        "rejects":  ["", "1"]
+      }
+    },
+    {
+      "id": "risky_06",
+      "regex": "(a*)+",
+      "description": "Star under plus — SEC001 nested quantifier variant",
+      "expected": {
+        "security_risk": "HIGH",
+        "rule_ids_include": ["SEC001"],
+        "min_dfa_states_le_dfa_states": true,
+        "accepts": ["", "a", "aa"],
+        "rejects":  ["b"]
+      }
+    }
+  ]
+}
