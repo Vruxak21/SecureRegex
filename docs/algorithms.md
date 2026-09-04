@@ -338,4 +338,89 @@ Result: **5 states, 10 transitions, 1 accepting state**.
 
 ---
 
-*This document will be extended as Phases 6–7 are implemented.*
+## Phase 6: DFA Minimization (Hopcroft's Algorithm)
+
+**Algorithm chosen: Hopcroft's partition refinement — O(n log n)**  
+Selected over the O(n²) table-filling (Myhill-Nerode) approach because:
+1. Handles large DFAs from complex char-class patterns efficiently.
+2. The industry-standard algorithm; worth documenting academically.
+3. Implementation complexity is manageable (~80 lines including dead-state handling).
+
+### Algorithm
+
+```
+function hopcroft(dfa):
+    dead   ← new_state()          // complete the DFA
+    rev    ← precompute_reverse_transitions(dfa ∪ {dead})
+    F      ← accepting states
+    QF     ← all_states − F (includes dead)
+    P      ← {F, QF}              // initial partition
+    W      ← {F, QF}              // worklist seeded with both
+
+    while W not empty:
+        W ← pop(W)
+        for each symbol a:
+            X ← {s | ∃ t∈W: delta(s,a) = t}   // via precomputed rev[a]
+            for each Y in P:
+                if X splits Y (Y∩X ≠ ∅ and Y\X ≠ ∅):
+                    replace Y with Y∩X and Y\X
+                    if Y in worklist: replace Y with both halves
+                    else:            add the smaller half  ← Hopcroft optimisation
+
+    rebuild DFA from live partitions (exclude dead partition)
+    renumber: start-block → 0
+```
+
+Time: O(|Σ| × n log n) using precomputed reverse transitions.  
+Space: O(n) for the partition and worklist sets.
+
+### Two-Phase Process
+
+```
+1. BFS unreachable removal   O(|states| + |transitions|)
+2. Hopcroft refinement       O(|Σ| × n log n)
+```
+
+### `(a|b)*abb` Minimization — Key Insight
+
+| State | NFA set | On 'a' | On 'b' | Accepting? |
+|-------|---------|--------|--------|------------|
+| D0 | {0,2,4,6,7,8} | D1 | D2 | No |
+| D1 | {0,1,2,4,5,7,8,9,10} | D1 | D3 | No |
+| **D2** | {0,2,3,4,5,7,8} | **D1** | **D2** | No |
+| D3 | {0,2,3,4,5,7,8,11,12} | D1 | D4 | No |
+| D4 | {0,2,3,4,5,7,8,13} | D1 | D2 | **Yes** |
+
+**D0 and D2 have identical transitions** (both go to D1 on 'a', to D2 on 'b')
+and are both non-accepting. In our **partial DFA** (no explicit dead state)
+they are indistinguishable → Hopcroft merges them.
+
+> **Why the Dragon Book says 5 states**: that textbook result uses a *complete*
+> DFA with an explicit dead/trap state. In that complete DFA, D0 and D2 differ
+> because D0 has no transition on some symbols (going to the dead state) while
+> D2 also goes to the dead state — but the dead state is distinguishable from
+> all live states, so the merge doesn't happen. Our partial DFA omits the dead
+> state entirely, enabling the extra merge.
+
+Minimized 4-state DFA:
+```
+State 0 (=D0∪D2): ──a──► 1   ──b──► 0 (self-loop)
+State 1 (=D1):    ──a──► 1   ──b──► 2
+State 2 (=D3):    ──a──► 1   ──b──► 3
+State 3 (=D4):    ──a──► 1   ──b──► 0   ← ACCEPTING
+```
+
+### Before/After Table (verified by tests)
+
+| Pattern | Original | After Hopcroft | Reduction |
+|---------|----------|----------------|-----------|
+| `(a|b)*abb` | 5 | **4** | 20.0% |
+| `ab\|cb` | 5 | **3** | 40.0% |
+| `a` | 2 | 2 | 0.0% |
+| `a*` | 1 | 1 | 0.0% |
+
+For `ab|cb`: D1≡D2 (both see only 'b'→accept) and D3≡D4 (both accepting, no outgoing).
+
+---
+
+*This document will be extended as Phase 7 is implemented.*
