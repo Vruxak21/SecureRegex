@@ -279,4 +279,63 @@ Space: O(|states|) for current state set.
 
 ---
 
-*This document will be extended as Phases 5–7 are implemented.*
+## Phase 5: Subset Construction (NFA → DFA)
+
+### Algorithm
+
+```
+function build_dfa(nfa, max_states):
+    D0      ← ε_closure({nfa.start})          // start DFA state
+    id_map  ← { D0: 0 }                        // NFA-set → DFA state ID
+    worklist← [D0]
+
+    while worklist not empty:
+        S ← dequeue(worklist)
+        for each symbol a in nfa.alphabet (sorted):
+            T ← ε_closure({ q | p ∈ S, (p,a,q) ∈ nfa.transitions })
+            if T is empty: continue            // implicit dead state — skip
+            if T ∉ id_map:
+                if |id_map| ≥ max_states: raise DFAConstructionError
+                id_map[T] ← |id_map|
+                enqueue(worklist, T)
+            record transition (id_map[S], a, id_map[T])
+
+    accepting ← { id_map[S] | S ∈ id_map, S ∩ nfa.accepting ≠ ∅ }
+    return DFA(states=values(id_map), transitions=..., start=0, accepting=accepting)
+```
+
+Time complexity: O(2^|Q| × |Σ|) worst case; O(|states_DFA| × |Σ|) typical.  
+Space: O(2^|Q|) worst case for the id_map.
+
+### DFA for `(a|b)*abb` — Trace
+
+| DFA State | NFA States | On 'a' | On 'b' | Accepting? |
+|-----------|-----------|--------|--------|------------|
+| D0 (start) | {0,2,4,6,7,8} | D1 | D2 | No |
+| D1 | {0,1,2,4,5,7,8,9,10} | D1 | D3 | No |
+| D2 | {0,2,3,4,5,7,8} | D1 | D2 | No |
+| D3 | {0,2,3,4,5,7,8,11,12} | D1 | D4 | No |
+| D4 | {0,2,3,4,5,7,8,13} | D1 | D2 | **YES** |
+
+Result: **5 states, 10 transitions, 1 accepting state**.  
+(NFA had 14 states, 16 transitions → 2.8× reduction)
+
+### Design Decisions
+
+1. **Partial DFA (no explicit dead/trap state)**: Missing transitions are simply
+   absent.  `dfa_accepts` treats a missing transition as an implicit reject.
+   This keeps small patterns tiny (e.g. `a` → 2 states, not 3).
+
+2. **BFS discovery order**: Guarantees the start state is always ID 0 and
+   output is stable across runs.
+
+3. **Sorted alphabet iteration**: Ensures transitions are always added in the
+   same order, making `to_dict()` output stable for tests and frontend caching.
+
+4. **Blowup guard**: If `|id_map| ≥ max_states` before adding a new state,
+   `DFAConstructionError` is raised immediately.  Default limit: 2,000 states
+   (configurable via `SECUREREGEX_MAX_DFA_STATES`).
+
+---
+
+*This document will be extended as Phases 6–7 are implemented.*
