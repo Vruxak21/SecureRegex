@@ -3,5 +3,13 @@ export type {
   HealthResponse,
   InfoResponse,
   ApiLimits,
-  ApiError,
-} from './client'
+} from '../api/client'
+
+export type {
+  Token, ASTNode,
+  AutomataTransition, Automaton,
+  Diagnostic, DiagnosticLocation,
+  SecurityFinding, SecurityReport, SecurityLocation,
+  PipelineStats,
+  AnalyzeResponse, TestResponse, ApiError,
+} from './api'

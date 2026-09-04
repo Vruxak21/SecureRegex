@@ -110,9 +110,9 @@ describe('HomePage', () => {
     expect(screen.getByText(/Docker-first/i)).toBeInTheDocument()
   })
 
-  it('Analyze Regex button is disabled in Phase 0', () => {
+  it('Analyze button is disabled with empty input', () => {
     render(<HomePage />)
-    const btn = screen.getByRole('button', { name: /Analyze Regex/i })
+    const btn = document.querySelector('#btn-analyze') as HTMLButtonElement
     expect(btn).toBeDisabled()
   })
 })
