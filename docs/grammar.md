@@ -137,3 +137,77 @@ The following are **completely out of scope** and will be caught at the lexer le
 - Backreferences `\1`
 - Conditionals `(?(id)yes|no)`
 - POSIX bracket expressions `[:alpha:]`
+
+---
+
+## Token Reference
+
+| Token type | Lexeme | Context |
+|---|---|---|
+| `CHAR` | any non-metacharacter, or any character inside `[…]` | everywhere |
+| `LPAREN` | `(` | outside char class |
+| `RPAREN` | `)` | outside char class |
+| `OR` | `\|` | outside char class |
+| `STAR` | `*` | outside char class |
+| `PLUS` | `+` | outside char class |
+| `QUESTION` | `?` | outside char class |
+| `LBRACKET` | `[` | starts char class |
+| `RBRACKET` | `]` | ends char class |
+| `DASH` | `-` | inside char class only |
+| `CARET` | `^` | immediately after `[` |
+| `DOT` | `.` | outside char class |
+| `EOF` | (end of input) | — |
+
+All characters that are metacharacters *outside* a character class (`( ) | * + ? [ . ^`) are
+treated as literal `CHAR` tokens *inside* a character class, except `]` (which closes it)
+and `-` (which is `DASH`). The lexer is context-sensitive on `[…]` boundaries.
+
+---
+
+## Grammar Ambiguity Notes
+
+The grammar as written is **unambiguous** given the precedence rules:
+
+1. **Quantifiers bind tightest** — they always apply to the immediately preceding primary.
+   There is no ambiguity in `a*b+` (Star(a) then Plus(b)).
+
+2. **Concatenation is explicit in the grammar** via the `{ repetition }` kleene-star on the
+   `concatenation` rule. The parser never needs to insert invisible concat operators.
+
+3. **Alternation `|` has lowest precedence** — `a|bc` = `Union(a, Concat(b,c))` without
+   any ambiguity.
+
+4. **Parentheses reset precedence** — `(a|b)*` is unambiguous: `Star(Union(a,b))`.
+
+The only intentional quirk: consecutive quantifiers (`a**`) are *syntactically accepted*
+(each quantifier applies to the result of the previous one) but flagged as SEM002 WARNING
+because the outer quantifier is almost always a typo.
+
+---
+
+## Complete Parse Error Catalogue
+
+| Input | Error type | Message |
+|---|---|---|
+| `(` | ParseError | Missing closing ')' at column 1 |
+| `(ab` | ParseError | Missing closing ')' for '(' at column 1 |
+| `)` | ParseError | Unexpected token ')' at column 1 |
+| `a)` | ParseError | Unexpected token ')' at column 2 |
+| `()` | ParseError | Empty group '()' at column 1 |
+| `\|` | ParseError | Expected expression before '\|' at column 1 |
+| `a\|` | ParseError | Expected expression after '\|' at column 2 |
+| `a\|\|b` | ParseError | Expected expression after '\|' at column 3 |
+| `*` | ParseError | Quantifier '*' at column 1 has nothing to quantify |
+| `+` | ParseError | Quantifier '+' at column 1 has nothing to quantify |
+| `?` | ParseError | Quantifier '?' at column 1 has nothing to quantify |
+| `[` | ParseError | Unclosed character class '[' at column 1 |
+| `[a-z` | ParseError | Unclosed character class '[' at column 1 |
+| `[]` | ParseError | Empty character class at column 1 |
+
+Semantic errors (returned in `diagnostics[]`, not as exceptions):
+
+| Input | Code | Severity | Message |
+|---|---|---|---|
+| `[z-a]` | SEM001 | ERROR | Invalid character class range 'z-a' |
+| `a**` | SEM002 | WARNING | Redundant consecutive quantifier |
+| `a.b` | SEM003 | ERROR | Dot wildcard not supported in v1 |
