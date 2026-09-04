@@ -184,4 +184,99 @@ Time complexity: O(n) where n = number of tokens.
 
 ---
 
-*This document will be extended as Phases 4–7 are implemented.*
+## Phase 4: Thompson's NFA Construction
+
+Each AST node maps to an **NFA fragment** with exactly ONE start state and ONE
+accepting state.  Fragments are composed by connecting them with ε-transitions.
+
+### State / Transition Count Per Rule
+
+| Rule           | New states | New ε-trans | New sym-trans | Notes |
+|----------------|-----------|-------------|---------------|-------|
+| Literal(c)     | 2         | 0           | 1             | q_s →[c]→ q_a |
+| Epsilon        | 2         | 1           | 0             | q_s →[ε]→ q_a |
+| CharClass      | 2         | 0           | `|chars|`     | One edge per char |
+| Concat(L, R)   | 0         | 1           | 0             | bridge ε: L.accept → R.start |
+| Union(L, R)    | 2         | 4           | 0             | fork + merge |
+| Star(N)        | 2         | 4           | 0             | skip + enter + loop + exit |
+| Plus(N)        | 1         | 2           | 0             | loop + exit (no skip) |
+| Question(N)    | 2         | 3           | 0             | skip + enter + exit |
+
+### State counts for `(a|b)*abb` (verified by tests)
+
+| Step            | States | Sym | ε  | Total |
+|-----------------|--------|-----|----|-------|
+| Literal a (1)   |   2    |  1  |  0 |   1   |
+| Literal b (2)   |  +2    | +1  |  0 |  +1   |
+| Union(a,b)      |  +2    |  0  | +4 |  +4   |
+| Star(union)     |  +2    |  0  | +4 |  +4   |
+| Literal a (3)   |  +2    | +1  |  0 |  +1   |
+| Concat(*,a)     |   0    |  0  | +1 |  +1   |
+| Literal b (4)   |  +2    | +1  |  0 |  +1   |
+| Concat(…,b)     |   0    |  0  | +1 |  +1   |
+| Literal b (5)   |  +2    | +1  |  0 |  +1   |
+| Concat(…,b)     |   0    |  0  | +1 |  +1   |
+| **Total**       | **14** |**5**|**11**|**16**|
+
+### Thompson Fragment Diagrams
+
+```
+STAR(N):
+           ┌─────────── ε ──────────────┐
+           │ ┌──────────────────────┐   │
+           ▼ ▼                      │   │
+    q_s ─ε─► N.start ──…── N.accept ─ε─┘
+     │                               │
+     └──────────── ε ───────────────► q_a
+
+PLUS(N):
+    N.start ──…── N.accept ─ε─► N.start  (loop)
+                             └─ε─► q_a    (exit)
+
+UNION(L, R):
+             ┌──ε──► L.start ──…── L.accept ──ε──┐
+    q_s ─────┤                                    ├──► q_a
+             └──ε──► R.start ──…── R.accept ──ε──┘
+```
+
+### Simulation Algorithm (ε-closure + BFS)
+
+```
+function nfa_accepts(nfa, string):
+    current ← ε_closure({nfa.start})
+    for each char c in string:
+        next ← {}
+        for each state s in current:
+            next ← next ∪ sym_map[s][c]   // symbol transitions
+        current ← ε_closure(next)
+    return current ∩ nfa.accepting ≠ ∅
+
+function ε_closure(states):
+    closure ← states
+    stack   ← list(states)
+    while stack not empty:
+        s ← pop(stack)
+        for each t in eps_map[s]:
+            if t ∉ closure:
+                closure ← closure ∪ {t}
+                push(stack, t)
+    return closure
+```
+
+Time complexity: O(|string| × |states|) per call after O(|states| + |transitions|)
+precomputation of `eps_map` and `sym_map`.
+
+Space: O(|states|) for current state set.
+
+### ε-closure Invariants (verified by tests)
+
+| Pattern | ε-closure({start}) contains accepting? | Reason |
+|---------|----------------------------------------|--------|
+| a*      | YES | Skip ε-edge: start→accept |
+| a?      | YES | Skip ε-edge: start→accept |
+| a+      | NO  | Must enter body at least once |
+| a       | NO  | Only 1 symbol transition |
+
+---
+
+*This document will be extended as Phases 5–7 are implemented.*
