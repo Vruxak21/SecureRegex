@@ -1,29 +1,33 @@
+import { useState } from 'react'
 import type { Automaton } from '../types'
+import AutomataGraph from '../visualizations/AutomataGraph'
 
-function AutomataTable({ automaton, title }: { automaton: Automaton; title: string }) {
+function AutomataTable({ automaton }: { automaton: Automaton }) {
   return (
     <div className="space-y-4">
       {/* Summary row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'States', value: automaton.states.length },
-          { label: 'Alphabet', value: automaton.alphabet.join(', ') || '∅' },
-          { label: 'Start', value: `q${automaton.start}` },
+          { label: 'States',    value: automaton.states.length },
+          { label: 'Alphabet',  value: automaton.alphabet.join(', ') || '∅' },
+          { label: 'Start',     value: `q${automaton.start}` },
           { label: 'Accepting', value: automaton.accepting.map(s => `q${s}`).join(', ') || '∅' },
         ].map(({ label, value }) => (
           <div key={label} className="bg-white/3 rounded-lg p-3 border border-white/8">
             <p className="text-xs text-white/30 mb-1">{label}</p>
-            <p className="font-mono text-white/80 text-sm truncate">{value}</p>
+            <p className="font-mono text-white/80 text-sm truncate">{String(value)}</p>
           </div>
         ))}
       </div>
 
       {/* Transition table */}
       <div>
-        <p className="text-xs text-white/30 uppercase tracking-wider mb-2">Transitions ({automaton.transitions.length})</p>
-        <div className="overflow-x-auto">
+        <p className="text-xs text-white/30 uppercase tracking-wider mb-2">
+          Transitions ({automaton.transitions.length})
+        </p>
+        <div className="overflow-x-auto max-h-52">
           <table className="w-full text-xs">
-            <thead>
+            <thead className="sticky top-0 bg-surface-800">
               <tr className="border-b border-white/10 text-left">
                 <th className="py-2 px-3 text-white/40 font-medium">From</th>
                 <th className="py-2 px-3 text-white/40 font-medium">Symbol</th>
@@ -36,8 +40,10 @@ function AutomataTable({ automaton, title }: { automaton: Automaton; title: stri
                   <td className="py-1.5 px-3 font-mono text-cyan-300">
                     {automaton.accepting.includes(t.from) ? '★ ' : ''}q{t.from}
                   </td>
-                  <td className="py-1.5 px-3 font-mono text-amber-300">
-                    {t.symbol === 'ε' ? <span className="text-purple-300">ε</span> : t.symbol}
+                  <td className="py-1.5 px-3 font-mono">
+                    {t.symbol === 'ε'
+                      ? <span className="text-purple-300">ε</span>
+                      : <span className="text-amber-300">{t.symbol}</span>}
                   </td>
                   <td className="py-1.5 px-3 font-mono text-cyan-300">
                     {automaton.accepting.includes(t.to) ? '★ ' : ''}q{t.to}
@@ -49,74 +55,69 @@ function AutomataTable({ automaton, title }: { automaton: Automaton; title: stri
         </div>
         <p className="text-[10px] text-white/20 mt-2">★ = accepting state</p>
       </div>
-
-      {/* State list */}
-      <div>
-        <p className="text-xs text-white/30 uppercase tracking-wider mb-2">All States</p>
-        <div className="flex flex-wrap gap-2">
-          {automaton.states.map(s => (
-            <span
-              key={s}
-              className={`px-2 py-1 rounded text-xs font-mono border ${
-                s === automaton.start
-                  ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                  : automaton.accepting.includes(s)
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                  : 'bg-white/5 text-white/50 border-white/10'
-              }`}
-            >
-              {s === automaton.start ? '→ ' : ''}
-              q{s}
-              {automaton.accepting.includes(s) ? ' ★' : ''}
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-4 mt-2">
-          <span className="text-[10px] text-white/20">→ start</span>
-          <span className="text-[10px] text-emerald-400/40">★ accepting</span>
-          <span className="text-[10px] text-brand-300/40">→★ start+accepting</span>
-        </div>
-      </div>
     </div>
   )
 }
 
 export default function AutomataTab({
-  nfa, dfa, minimized_dfa
+  nfa, dfa, minimized_dfa,
 }: {
   nfa: Automaton
   dfa: Automaton
   minimized_dfa: Automaton
 }) {
   const [active, setActive] = useState<'nfa' | 'dfa' | 'min'>('nfa')
+  const [view,   setView]   = useState<'graph' | 'table'>('graph')
+
   const tabs = [
-    { id: 'nfa' as const, label: 'NFA', data: nfa },
-    { id: 'dfa' as const, label: 'DFA', data: dfa },
+    { id: 'nfa' as const, label: 'NFA',     data: nfa },
+    { id: 'dfa' as const, label: 'DFA',     data: dfa },
     { id: 'min' as const, label: 'Min DFA', data: minimized_dfa },
   ]
   const current = tabs.find(t => t.id === active)!
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 border-b border-white/10 pb-3">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActive(t.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              active === t.id
-                ? 'bg-brand-600 text-white'
-                : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            {t.label}
-            <span className="ml-1.5 text-[10px] opacity-60">{t.data.states.length}q</span>
-          </button>
-        ))}
+      {/* Automaton type tabs */}
+      <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/10 pb-3">
+        <div className="flex gap-2">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActive(t.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                active === t.id
+                  ? 'bg-brand-600 text-white'
+                  : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              {t.label}
+              <span className="ml-1.5 text-[10px] opacity-60">{t.data.states.length}q</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Graph / Table toggle */}
+        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+          {(['graph', 'table'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1 rounded text-xs transition-all ${
+                view === v ? 'bg-brand-600 text-white' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {v === 'graph' ? '⬡ Graph' : '≡ Table'}
+            </button>
+          ))}
+        </div>
       </div>
-      <AutomataTable automaton={current.data} title={current.label} />
+
+      {view === 'graph' ? (
+        <AutomataGraph automaton={current.data} height={420} />
+      ) : (
+        <AutomataTable automaton={current.data} />
+      )}
     </div>
   )
 }
-
-import { useState } from 'react'
