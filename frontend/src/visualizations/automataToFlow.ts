@@ -108,7 +108,7 @@ export function automataToFlow(
       source: String(from),
       target: String(to),
       label,
-      type: isSelfLoop ? 'selfConnecting' : 'default',
+      type: isSelfLoop ? 'selfLoop' : 'default',
       animated: false,
       data: { symbol: label },
       style: {

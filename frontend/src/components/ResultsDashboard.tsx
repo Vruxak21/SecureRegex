@@ -7,14 +7,12 @@ import SecurityTab from './SecurityTab'
 import TestRegexTab from './TestRegexTab'
 import StatsPanel  from './StatsPanel'
 
-type TabId = 'tokens' | 'ast' | 'nfa' | 'dfa' | 'min' | 'security' | 'test'
+type TabId = 'tokens' | 'ast' | 'automata' | 'security' | 'test'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'tokens',   label: 'Tokens' },
   { id: 'ast',      label: 'AST' },
-  { id: 'nfa',      label: 'NFA' },
-  { id: 'dfa',      label: 'DFA' },
-  { id: 'min',      label: 'Minimized DFA' },
+  { id: 'automata', label: 'Automata' },
   { id: 'security', label: 'Security' },
   { id: 'test',     label: 'Test Regex' },
 ]
@@ -103,13 +101,7 @@ export default function ResultsDashboard({ result, regex }: Props) {
           <div className="p-5">
             {activeTab === 'tokens'   && <TokensTab   tokens={result.tokens} />}
             {activeTab === 'ast'      && <ASTTab      ast={result.ast} />}
-            {activeTab === 'nfa'      && (
-              <AutomataTab nfa={result.nfa} dfa={result.dfa} minimized_dfa={result.minimized_dfa} />
-            )}
-            {activeTab === 'dfa'      && (
-              <AutomataTab nfa={result.nfa} dfa={result.dfa} minimized_dfa={result.minimized_dfa} />
-            )}
-            {activeTab === 'min'      && (
+            {activeTab === 'automata' && (
               <AutomataTab nfa={result.nfa} dfa={result.dfa} minimized_dfa={result.minimized_dfa} />
             )}
             {activeTab === 'security' && <SecurityTab  report={result.security} />}

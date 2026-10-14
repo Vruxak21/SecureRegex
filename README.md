@@ -33,17 +33,17 @@ SecureRegex analyses regular expressions end-to-end:
 ├─────────────────────────────────────────────────────────────┤
 │  Regex:  [(a|b)*abb________________]  [Analyze] [Clear]     │
 │                                                             │
-│  ┌──Tokens──┬──AST──┬──NFA──┬──DFA──┬──Min──┬──Security──┐ │
-│  │                                                        │ │
-│  │   ⬡ Graph / ≡ Table toggle                            │ │
-│  │                                                        │ │
-│  │   q0(→) ──a──▶ q1 ──b──▶ q3 ──b──▶ q4★              │ │
-│  │    │          ↑                                       │ │
-│  │    └──b──▶ q2─┘                                       │ │
-│  │                                                        │ │
-│  └────────────────────────────────────────────────────────┘ │
+│  ┌──Tokens──┬──AST──┬──NFA──┬──DFA──┬──Min──┬──Security──┐  │
+│  │                                                       │  │
+│  │   ⬡ Graph / ≡ Table toggle                            │  │
+│  │                                                       │  │
+│  │   q0(→) ──a──▶ q1 ──b──▶ q3 ──b──▶ q4★                │  │
+│  │    │          ↑                                       │  │
+│  │    └──b──▶ q2─┘                                       │  │
+│  │                                                       │  │
+│  └───────────────────────────────────────────────────────┘  │
 │                                                             │
-│  Stats: NFA 14st · DFA 5st · Min 4st · Reduction 20%       │
+│  Stats: NFA 14st · DFA 5st · Min 4st · Reduction 20%        │
 │         Security: NONE                                      │
 └─────────────────────────────────────────────────────────────┘
 ```

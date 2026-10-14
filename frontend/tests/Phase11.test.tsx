@@ -177,13 +177,14 @@ describe('E2E smoke: analyze (a|b)*abb', () => {
     await waitFor(() => expect(screen.getByTestId('results-dashboard')).toBeInTheDocument())
   })
 
-  it('all 7 tabs are rendered', async () => {
+  it('all 5 top-level tabs are rendered', async () => {
     render(<HomePage />)
     await userEvent.type(screen.getByRole('textbox'), '(a|b)*abb')
     clickAnalyze()
     await waitFor(() => screen.getByTestId('results-dashboard'))
     const tabs = screen.getAllByRole('tab')
-    expect(tabs.length).toBeGreaterThanOrEqual(7)
+    expect(tabs.length).toBe(5)
+    expect(screen.getByRole('tab', { name: 'Automata' })).toBeInTheDocument()
   })
 
   it('Tokens tab shows token type LPAREN', async () => {

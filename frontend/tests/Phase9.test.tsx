@@ -232,13 +232,14 @@ describe('Analyze (a|b)*abb — results dashboard', () => {
     expect(screen.getByRole('tab', { name: /Test Regex/i })).toBeInTheDocument()
   })
 
-  it('dashboard has all 7 tabs', async () => {
+  it('dashboard has all 5 top-level tabs', async () => {
     render(<HomePage />)
     await userEvent.type(screen.getByRole('textbox'), '(a|b)*abb')
     clickAnalyze()
     await waitFor(() => screen.getByTestId('results-dashboard'))
     const tabs = screen.getAllByRole('tab')
-    expect(tabs.length).toBeGreaterThanOrEqual(7)
+    expect(tabs).toHaveLength(5)
+    expect(screen.getByRole('tab', { name: 'Automata' })).toBeInTheDocument()
   })
 
   it('stats panel shows NFA states count', async () => {

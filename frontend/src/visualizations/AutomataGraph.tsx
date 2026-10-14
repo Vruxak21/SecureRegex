@@ -8,7 +8,7 @@
  *
  * @xyflow/react v12 API is used throughout.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   Controls,
@@ -23,8 +23,11 @@ import '@xyflow/react/dist/style.css'
 import type { Automaton } from '../types'
 import { automataToFlow, type NodeData } from './automataToFlow'
 import AutomataStateNode from './AutomataStateNode'
+import SelfLoopEdge from './SelfLoopEdge'
 
 const nodeTypes = { automataState: AutomataStateNode }
+const edgeTypes = { selfLoop: SelfLoopEdge }
+const EMPTY_HIGHLIGHTED_STATES: number[] = []
 
 interface Props {
   automaton: Automaton
@@ -45,17 +48,27 @@ interface InspectorState {
 
 export default function AutomataGraph({
   automaton,
-  highlightedStates = [],
+  highlightedStates = EMPTY_HIGHLIGHTED_STATES,
   height = 420,
 }: Props) {
+  const highlightedKey = highlightedStates.join(',')
   const { nodes: initNodes, edges: initEdges } = useMemo(
     () => automataToFlow(automaton, highlightedStates),
-    [automaton, highlightedStates],
+    [automaton, highlightedKey],
   )
 
-  const [nodes, , onNodesChange] = useNodesState(initNodes)
-  const [edges, , onEdgesChange] = useEdgesState(initEdges)
+  const [nodes, setNodes, onNodesChange] = useNodesState(initNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges)
   const [inspector, setInspector] = useState<InspectorState | null>(null)
+
+  useEffect(() => {
+    setNodes(initNodes)
+    setEdges(initEdges)
+  }, [initEdges, initNodes])
+
+  useEffect(() => {
+    setInspector(null)
+  }, [automaton])
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {
@@ -92,6 +105,7 @@ export default function AutomataGraph({
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.35 }}
         minZoom={0.3}

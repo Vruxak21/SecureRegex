@@ -189,6 +189,7 @@ describe('automataToFlow — pure conversion', () => {
     it('self-loop on q0 (b→q0) creates an edge from 0 to 0', () => {
       const selfLoop = edges.find(e => e.source === '0' && e.target === '0')
       expect(selfLoop).toBeDefined()
+      expect(selfLoop?.type).toBe('selfLoop')
     })
 
     it('produces 8 edges for 8 transitions', () => {
@@ -414,6 +415,18 @@ describe('AutomataTab — graph/table toggle', () => {
     fireEvent.click(screen.getByText(/Min DFA/))
     const rf = screen.getByTestId('react-flow')
     expect(Number(rf.getAttribute('data-nodes'))).toBe(4)
+  })
+
+  it('updates the mounted graph when switching between automata', () => {
+    render(<AutomataTab {...props} />)
+
+    expect(Number(screen.getByTestId('react-flow').getAttribute('data-nodes'))).toBe(14)
+
+    fireEvent.click(screen.getByText(/^DFA/))
+    expect(Number(screen.getByTestId('react-flow').getAttribute('data-nodes'))).toBe(5)
+
+    fireEvent.click(screen.getByText(/Min DFA/))
+    expect(Number(screen.getByTestId('react-flow').getAttribute('data-nodes'))).toBe(4)
   })
 })
 

@@ -114,7 +114,11 @@ export default function AutomataTab({
       </div>
 
       {view === 'graph' ? (
-        <AutomataGraph automaton={current.data} height={420} />
+        <AutomataGraph
+          key={active}
+          automaton={current.data}
+          height={420}
+        />
       ) : (
         <AutomataTable automaton={current.data} />
       )}
