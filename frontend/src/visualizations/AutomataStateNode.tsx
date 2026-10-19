@@ -19,25 +19,25 @@ import type { NodeData } from './automataToFlow'
 function AutomataStateNode({ data, selected }: NodeProps<NodeData>) {
   const { label, isStart, isAccepting, isHighlighted } = data
 
-  let base = 'bg-surface-700 border-white/20 text-white/70'
+  let base = 'bg-white border-[#9fb4af] text-[#1c2a35]'
   let ring = ''
   let glow = ''
 
   if (isHighlighted) {
-    base = 'bg-indigo-900/80 border-indigo-400 text-indigo-200'
-    glow = 'shadow-[0_0_16px_4px_rgba(99,102,241,0.5)]'
+    base = 'bg-[#e3f2ef] border-[#087f79] text-[#075b59]'
+    glow = 'shadow-[0_0_16px_4px_rgba(8,127,121,0.25)]'
   } else if (isStart && isAccepting) {
-    base = 'bg-brand-900/80 border-brand-400 text-brand-200'
-    ring = 'ring-2 ring-offset-2 ring-offset-surface-800 ring-emerald-400'
+    base = 'bg-[#d8efeb] border-[#087f79] text-[#075b59]'
+    ring = 'ring-2 ring-offset-2 ring-offset-white ring-[#c58b28]'
   } else if (isStart) {
-    base = 'bg-brand-900/60 border-brand-400 text-brand-200'
+    base = 'bg-[#e3f2ef] border-[#087f79] text-[#075b59]'
   } else if (isAccepting) {
-    base = 'bg-emerald-900/50 border-emerald-400 text-emerald-200'
-    ring = 'ring-2 ring-offset-2 ring-offset-surface-800 ring-emerald-500/60'
+    base = 'bg-[#edf7f4] border-[#27967d] text-[#075b59]'
+    ring = 'ring-2 ring-offset-2 ring-offset-white ring-[#27967d]'
   }
 
   if (selected) {
-    glow = `${glow} shadow-[0_0_12px_2px_rgba(139,92,246,0.6)]`
+    glow = `${glow} shadow-[0_0_12px_2px_rgba(8,127,121,0.3)]`
   }
 
   return (
@@ -52,7 +52,7 @@ function AutomataStateNode({ data, selected }: NodeProps<NodeData>) {
     >
       {/* Arrow indicator for start state */}
       {isStart && (
-        <span className="absolute -left-6 text-brand-400 text-base font-bold select-none">→</span>
+        <span className="absolute -left-6 text-[#087f79] text-base font-bold select-none">→</span>
       )}
 
       {label}

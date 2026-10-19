@@ -3,102 +3,53 @@ import { api, extractErrorMessage } from '../api/client'
 import type { AnalyzeResponse, HealthResponse, InfoResponse } from '../types'
 import ResultsDashboard from '../components/ResultsDashboard'
 
-// ── Constants ────────────────────────────────────────────────────────────────
-
 const EXAMPLE_PATTERNS = [
-  { label: '(a|b)*abb', desc: 'Safe — canonical DFA example' },
-  { label: '(a+)+',     desc: 'Dangerous — nested quantifiers' },
-  { label: '(a|aa)+',   desc: 'Dangerous — overlapping alternation' },
-  { label: '[a-z]+',    desc: 'Character class repetition' },
-  { label: 'ab|cb',     desc: '5→3 state minimization' },
-  { label: '(a?)+',     desc: 'Nullable repetition' },
+  { label: '(a|b)*abb', desc: 'A complete compiler example' },
+  { label: '(a+)+', desc: 'Nested quantifiers' },
+  { label: '(a|aa)+', desc: 'Overlapping alternation' },
+  { label: '[a-z]+', desc: 'Character class repetition' },
+  { label: 'ab|cb', desc: 'A minimization example' },
+  { label: '(a?)+', desc: 'Nullable repetition' },
 ]
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+const PIPELINE_STEPS = ['Lexer', 'Parser', 'AST', 'Semantic', 'NFA', 'DFA', 'Minimize', 'Security', 'Report']
 
 type ConnectionStatus = 'connecting' | 'ok' | 'error'
 
-function StatusDot({ status }: { status: ConnectionStatus }) {
-  const classes: Record<ConnectionStatus, string> = {
-    connecting: 'status-loading animate-pulse',
-    ok: 'status-ok',
-    error: 'status-error',
-  }
-  const labels: Record<ConnectionStatus, string> = {
-    connecting: '⟳ Connecting…',
-    ok: '✓ Backend online',
-    error: '✗ Backend unreachable',
-  }
-  return <span className={classes[status]}>{labels[status]}</span>
+function Status({ status }: { status: ConnectionStatus }) {
+  const label = status === 'connecting' ? 'Connecting' : status === 'ok' ? 'Backend online' : 'Backend unreachable'
+  return <span className={`connection ${status}`}><span className="connection-dot" />{label}</span>
 }
-
-function PipelineStep({ step, label, active }: { step: number; label: string; active?: boolean }) {
-  return (
-    <div className={`flex flex-col items-center gap-2 ${active ? 'opacity-100' : 'opacity-40'}`}>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border
-        ${active
-          ? 'bg-brand-600 border-brand-400 text-white shadow-lg shadow-brand-500/40'
-          : 'bg-surface-700 border-white/10 text-white/40'
-        }`}>
-        {step}
-      </div>
-      <span className="text-[10px] text-white/50 text-center max-w-[60px] leading-tight">{label}</span>
-    </div>
-  )
-}
-
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
-  return (
-    <div className="glass p-6 flex flex-col gap-3 hover:border-brand-500/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-500/10 group">
-      <span className="text-3xl group-hover:scale-110 transition-transform duration-200">{icon}</span>
-      <h3 className="font-semibold text-white text-sm">{title}</h3>
-      <p className="text-white/50 text-xs leading-relaxed">{description}</p>
-    </div>
-  )
-}
-
-// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  // Backend status
-  const [health, setHealth]   = useState<HealthResponse | null>(null)
-  const [info, setInfo]       = useState<InfoResponse | null>(null)
-  const [status, setStatus]   = useState<ConnectionStatus>('connecting')
+  const [health, setHealth] = useState<HealthResponse | null>(null)
+  const [, setInfo] = useState<InfoResponse | null>(null)
+  const [status, setStatus] = useState<ConnectionStatus>('connecting')
   const [connErr, setConnErr] = useState('')
-
-  // Analyzer
-  const [regex, setRegex]         = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [result, setResult]       = useState<AnalyzeResponse | null>(null)
+  const [regex, setRegex] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<AnalyzeResponse | null>(null)
   const [analyzeErr, setAnalyzeErr] = useState('')
-  const [errCol, setErrCol]       = useState<number | null>(null)
-
-  const inputRef  = useRef<HTMLInputElement>(null)
+  const [errCol, setErrCol] = useState<number | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 
-  // Backend health check
   useEffect(() => {
     let cancelled = false
-    async function check() {
-      try {
-        const [h, i] = await Promise.all([api.health(), api.info()])
+    Promise.all([api.health(), api.info()])
+      .then(([healthResponse, infoResponse]) => {
         if (cancelled) return
-        setHealth(h)
-        setInfo(i)
+        setHealth(healthResponse)
+        setInfo(infoResponse)
         setStatus('ok')
-      } catch (e: unknown) {
+      })
+      .catch((error: unknown) => {
         if (cancelled) return
         setStatus('error')
-        setConnErr((e as { message?: string })?.message ?? 'Unknown error')
-      }
-    }
-    check()
+        setConnErr((error as { message?: string })?.message ?? 'Connection refused')
+      })
     return () => { cancelled = true }
   }, [])
-
-  const pipelineSteps = ['Lexer', 'Parser', 'AST', 'Semantic', 'NFA', 'DFA', 'Minimize', 'Security', 'Report']
-
-  // ── Analyze handler ───────────────────────────────────────────────────────
 
   async function handleAnalyze() {
     const trimmed = regex.trim()
@@ -108,22 +59,18 @@ export default function HomePage() {
     setErrCol(null)
     setResult(null)
     try {
-      const r = await api.analyze(trimmed)
-      setResult(r)
-      // Scroll to results
+      const response = await api.analyze(trimmed)
+      setResult(response)
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
-    } catch (e: unknown) {
-      const msg = extractErrorMessage(e)
-      setAnalyzeErr(msg)
-      // Extract column for input highlighting
-      const col = (e as { position?: { column?: number } })?.position?.column ?? null
-      setErrCol(col)
+    } catch (error: unknown) {
+      setAnalyzeErr(extractErrorMessage(error))
+      setErrCol((error as { position?: { column?: number } })?.position?.column ?? null)
     } finally {
       setLoading(false)
     }
   }
 
-  function handleClear() {
+  function clearWorkspace() {
     setRegex('')
     setResult(null)
     setAnalyzeErr('')
@@ -131,7 +78,7 @@ export default function HomePage() {
     inputRef.current?.focus()
   }
 
-  function loadExample(pattern: string) {
+  function useExample(pattern: string) {
     setRegex(pattern)
     setResult(null)
     setAnalyzeErr('')
@@ -141,226 +88,101 @@ export default function HomePage() {
 
   const canAnalyze = regex.trim().length > 0 && !loading
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
-    <div className="min-h-screen bg-surface-900 relative overflow-x-hidden">
-      {/* Background glow blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-600/20 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute -top-20 right-0 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl animate-pulse-slow [animation-delay:1s]" />
-        <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-brand-500/10 rounded-full blur-3xl animate-pulse-slow [animation-delay:2s]" />
-      </div>
-
-      {/* ── Nav ── */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-purple-600 rounded-lg flex items-center justify-center text-sm font-bold shadow-lg shadow-brand-500/30">
-            S
+    <div className="learning-shell">
+      <header className="site-header">
+        <div className="header-inner">
+          <a className="brand" href="/" aria-label="SecureRegex home">
+            <span className="brand-mark">S</span>
+            <span className="brand-name">SecureRegex</span>
+            <span className="brand-subtitle">Regex laboratory</span>
+          </a>
+          <div className="connection-wrap">
+            <Status status={status} />
+            {health && <span className="brand-subtitle">v{health.version}</span>}
           </div>
-          <span className="font-bold text-white tracking-tight">SecureRegex</span>
-          {health && <span className="text-xs text-white/30 font-mono">v{health.version}</span>}
         </div>
-        <StatusDot status={status} />
-      </nav>
+      </header>
 
-      {/* ── Hero ── */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 pt-16 pb-8 text-center animate-slide-up">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-medium mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-          Compiler-based ReDoS Analyzer — Phase 9
-        </div>
-        <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight mb-4">
-          <span className="text-white">Analyze Regex</span>
-          <br />
-          <span className="text-gradient">Security &amp; Automata</span>
-        </h1>
-        <p className="text-white/50 text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-          Hand-written Lexer → Parser → NFA → DFA → Hopcroft Minimization → ReDoS Security Analysis.
-          No regex libraries — pure compiler pipeline.
-        </p>
-      </section>
+      <main className="page-wrap">
+        <section className="hero">
+          <div>
+            <div className="eyebrow">A visual lesson in regular expressions</div>
+            <h1>Analyze Regex.<br /><em>See the machine.</em></h1>
+            <p className="hero-copy">
+              Turn a regular expression into its tokens, syntax tree, automata,
+              and security notes. A clear, step-by-step workspace for learning
+              how regex engines are built.
+            </p>
+          </div>
+          <aside className="lesson-note">
+            <strong>How to use this lab</strong>
+            Start with an example or type your own pattern. The compiler trail
+            below the editor shows what each stage contributes.
+          </aside>
+        </section>
 
-      {/* ── Analyzer card ── */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 pb-10">
-        <div className="glass p-6 space-y-4">
-          {/* Input row */}
-          <div className="space-y-2">
-            <label htmlFor="regex-input" className="text-xs text-white/40 uppercase tracking-wider">
-              Regular Expression
-            </label>
-            <div className="relative">
+        <section className="analyzer-board" aria-label="Regex analyzer">
+          <label className="board-label" htmlFor="regex-input">Your regular expression</label>
+          <div className="regex-row">
+            <div className="regex-field" style={{ position: 'relative', flex: 1 }}>
               <input
                 id="regex-input"
                 ref={inputRef}
-                type="text"
+                className={`regex-input ${analyzeErr ? 'error' : ''}`}
                 value={regex}
-                onChange={e => setRegex(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && canAnalyze && handleAnalyze()}
-                placeholder="e.g. (a|b)*abb"
+                onChange={event => setRegex(event.target.value)}
+                onKeyDown={event => event.key === 'Enter' && canAnalyze && handleAnalyze()}
+                placeholder="Try (a|b)*abb"
                 spellCheck={false}
                 autoComplete="off"
-                className={`w-full bg-surface-800 border rounded-xl px-4 py-3 text-white font-mono text-base
-                           placeholder-white/20 focus:outline-none focus:ring-1 transition-all
-                           ${analyzeErr
-                             ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/30'
-                             : 'border-white/10 focus:border-brand-500/50 focus:ring-brand-500/30'
-                           }`}
               />
-              {/* Error column indicator */}
-              {errCol !== null && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
-                  col {errCol}
-                </div>
-              )}
+              {errCol !== null && <span className="mono error-text" style={{ position: 'absolute', right: 12, top: 16, fontSize: 11 }}>column {errCol}</span>}
             </div>
-          </div>
-
-          {/* Error banner */}
-          {analyzeErr && (
-            <div
-              role="alert"
-              className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3"
-            >
-              <span className="text-red-400 text-lg mt-0.5 shrink-0">⚠</span>
-              <p className="text-red-300 text-sm leading-relaxed">{analyzeErr}</p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              id="btn-analyze"
-              onClick={handleAnalyze}
-              disabled={!canAnalyze}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {loading
-                ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Analyzing…</>
-                : <><span>⚡</span> Analyze</>
-              }
+            <button id="btn-analyze" className="btn-analyze" onClick={handleAnalyze} disabled={!canAnalyze}>
+              {loading ? 'Analyzing…' : 'Analyze pattern'}
             </button>
-            <button
-              onClick={handleClear}
-              disabled={!regex && !result}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-white/10 text-white/50
-                         hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              Clear
-            </button>
-            <a
-              href="/docs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-                         border border-white/10 text-white/50 hover:text-white hover:border-white/20 transition-all"
-            >
-              📖 API Docs
-            </a>
           </div>
-
-          {/* Example patterns */}
-          <div className="space-y-2 pt-2 border-t border-white/5">
-            <p className="text-xs text-white/30 uppercase tracking-wider">Examples</p>
-            <div className="flex flex-wrap gap-2">
-              {EXAMPLE_PATTERNS.map(({ label, desc }) => (
-                <button
-                  key={label}
-                  onClick={() => loadExample(label)}
-                  title={desc}
-                  className="px-3 py-1.5 rounded-lg text-xs font-mono border border-white/10 text-white/50
-                             hover:text-white hover:border-brand-500/40 hover:bg-brand-500/10 transition-all"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          {analyzeErr && <div className="alert" role="alert">{analyzeErr}</div>}
+          <div className="examples">
+            <span>Try a lesson:</span>
+            {EXAMPLE_PATTERNS.map(example => (
+              <button key={example.label} className="example-chip" title={example.desc} onClick={() => useExample(example.label)}>
+                {example.label}
+              </button>
+            ))}
+            <button className="btn-quiet" style={{ marginLeft: 'auto' }} onClick={clearWorkspace} disabled={!regex && !result}>Clear</button>
           </div>
-        </div>
-      </section>
-
-      {/* ── Results ── */}
-      {result && (
-        <section ref={resultRef} className="relative z-10 max-w-5xl mx-auto px-6 pb-16 animate-fade-in">
-          <ResultsDashboard result={result} regex={regex.trim()} />
         </section>
-      )}
 
-      {/* ── Pipeline vis (shown when no results) ── */}
-      {!result && (
-        <>
-          <section className="relative z-10 max-w-5xl mx-auto px-6 pb-16">
-            <h2 className="text-white/40 text-xs font-semibold uppercase tracking-widest text-center mb-8">
-              Compiler Pipeline
-            </h2>
-            <div className="glass p-8 flex flex-wrap justify-center items-start gap-4">
-              {pipelineSteps.map((label, i) => (
-                <div key={label} className="flex items-center gap-4">
-                  <PipelineStep step={i + 1} label={label} active={status === 'ok'} />
-                  {i < pipelineSteps.length - 1 && (
-                    <div className={`w-8 h-px ${status === 'ok' ? 'bg-brand-600' : 'bg-white/10'} transition-colors duration-700`} />
-                  )}
-                </div>
-              ))}
-            </div>
+        {result ? (
+          <section ref={resultRef} className="results-shell">
+            <ResultsDashboard result={result} regex={regex.trim()} />
           </section>
-
-          {/* Backend status card */}
-          <section className="relative z-10 max-w-5xl mx-auto px-6 pb-16 animate-fade-in">
-            <div className="glass p-6">
-              <h2 className="font-semibold text-white/70 text-xs uppercase tracking-widest mb-4">
-                Backend Connection
-              </h2>
-              {status === 'connecting' && (
-                <div className="flex items-center gap-3 text-white/40">
-                  <div className="w-4 h-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">Pinging backend at <code className="text-brand-300">http://localhost:8000/health</code>…</span>
-                </div>
-              )}
-              {status === 'ok' && health && info && (
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-white/30 font-mono mb-2">GET /health</p>
-                    <pre className="code-block text-xs">{JSON.stringify(health, null, 2)}</pre>
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/30 font-mono mb-2">GET /api/v1/info → limits</p>
-                    <pre className="code-block text-xs">{JSON.stringify(info.limits, null, 2)}</pre>
-                  </div>
-                </div>
-              )}
-              {status === 'error' && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-red-300 text-sm">
-                    Could not reach the backend. Make sure it is running on <code className="text-red-200">localhost:8000</code>.
-                  </p>
-                  {connErr && <pre className="code-block text-xs text-red-300/70">{connErr}</pre>}
-                  <p className="text-white/30 text-xs">
-                    Start with: <code className="text-white/50">cd backend &amp;&amp; uvicorn app.main:app --reload</code>
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Feature grid */}
-          <section className="relative z-10 max-w-5xl mx-auto px-6 pb-24">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <FeatureCard icon="🔬" title="Hand-written Compiler" description="Zero use of Python's re module. Pure lexer, parser, NFA, and DFA from scratch." />
-              <FeatureCard icon="🛡️" title="ReDoS Detection" description="Heuristic analysis of ambiguous NFA paths and exponential backtracking patterns." />
-              <FeatureCard icon="🌐" title="Automata Visualizer" description="Interactive NFA and DFA graphs rendered with React Flow — states, transitions, accepting nodes." />
-              <FeatureCard icon="⚡" title="DFA Minimisation" description="Hopcroft's algorithm reduces state count for efficient real-time matching." />
-              <FeatureCard icon="📊" title="JSON Reports" description="Structured analysis output: AST, NFA stats, DFA stats, security findings." />
-              <FeatureCard icon="🐳" title="Docker-first" description="Single docker-compose up brings up the full stack: FastAPI backend + Vite frontend." />
-            </div>
-          </section>
-        </>
-      )}
-
-      {/* ── Footer ── */}
-      <footer className="relative z-10 border-t border-white/5 py-6 px-6 text-center">
-        <p className="text-white/20 text-xs">
-          SecureRegex — Academic project. Hand-written compiler pipeline. No paid APIs.
-        </p>
-      </footer>
+        ) : (
+          <>
+            <section className="pipeline">
+              <h2 className="section-title">The compiler trail</h2>
+              <div className="pipeline-track">
+                {PIPELINE_STEPS.map(step => <div className="pipeline-step" key={step}>{step}</div>)}
+              </div>
+            </section>
+            <section className="feature-grid" aria-label="What you can study">
+              <article className="feature-card"><h3>Hand-written compiler</h3><p>Follow a pattern from characters to a working automaton without hiding the interesting steps.</p></article>
+              <article className="feature-card"><h3>ReDoS detection</h3><p>Learn why nested quantifiers and overlapping branches can be risky in backtracking engines.</p></article>
+              <article className="feature-card"><h3>Automata visualizer</h3><p>Compare epsilon-NFA, DFA, and minimized DFA diagrams side by side in one study panel.</p></article>
+              <article className="feature-card"><h3>DFA Minimisation</h3><p>See equivalent states merge while the recognized language stays the same.</p></article>
+              <article className="feature-card"><h3>JSON Reports</h3><p>Inspect tokens, syntax nodes, transitions, and findings in a readable format.</p></article>
+              <article className="feature-card"><h3>Docker-first</h3><p>Your classroom experiments stay on the local app and use no paid services.</p></article>
+            </section>
+            <section className="footer">
+              {status === 'error'
+                ? <>The workspace cannot reach the compiler at <code>localhost:8000</code>. Start the backend, then refresh. {connErr && <span>{connErr}</span>}</>
+                : <>The compiler is ready when the status indicator says <strong>Backend online</strong>.</>}
+            </section>
+          </>
+        )}
+      </main>
     </div>
   )
 }

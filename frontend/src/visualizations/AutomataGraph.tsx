@@ -111,19 +111,19 @@ export default function AutomataGraph({
         minZoom={0.3}
         maxZoom={3}
         proOptions={{ hideAttribution: true }}
-        style={{ background: 'transparent' }}
+        style={{ background: '#fbfcfb' }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color="#ffffff0a"
+          color="#dbe3df"
         />
         <Controls
           showInteractive={false}
           style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#ffffff',
+            border: '1px solid #dbe3df',
             borderRadius: 8,
           }}
         />

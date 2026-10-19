@@ -112,22 +112,22 @@ export function automataToFlow(
       animated: false,
       data: { symbol: label },
       style: {
-        stroke: isHighlightedEdge ? '#6366f1' : '#ffffff30',
+        stroke: isHighlightedEdge ? '#087f79' : '#52716d',
         strokeWidth: 1.5,
       },
       labelStyle: {
-        fill: '#f59e0b',
+        fill: '#075b59',
         fontSize: 11,
         fontFamily: 'JetBrains Mono, monospace',
         fontWeight: 600,
       },
       labelBgStyle: {
-        fill: '#1e1b2e',
-        fillOpacity: 0.85,
+        fill: '#ffffff',
+        fillOpacity: 0.95,
       },
       markerEnd: {
         type: 'arrowclosed' as const,
-        color: '#ffffff30',
+        color: '#52716d',
         width: 14,
         height: 14,
       },

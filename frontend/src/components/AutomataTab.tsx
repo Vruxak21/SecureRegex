@@ -13,39 +13,37 @@ function AutomataTable({ automaton }: { automaton: Automaton }) {
           { label: 'Start',     value: `q${automaton.start}` },
           { label: 'Accepting', value: automaton.accepting.map(s => `q${s}`).join(', ') || '∅' },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white/3 rounded-lg p-3 border border-white/8">
-            <p className="text-xs text-white/30 mb-1">{label}</p>
-            <p className="font-mono text-white/80 text-sm truncate">{String(value)}</p>
+          <div key={label} className="feature-card" style={{ minHeight: 'auto', padding: 14 }}>
+            <p className="subtle" style={{ margin: 0 }}>{label}</p>
+            <p className="mono" style={{ margin: '5px 0 0' }}>{String(value)}</p>
           </div>
         ))}
       </div>
 
       {/* Transition table */}
       <div>
-        <p className="text-xs text-white/30 uppercase tracking-wider mb-2">
+        <p className="subtle" style={{ marginBottom: 8 }}>
           Transitions ({automaton.transitions.length})
         </p>
         <div className="overflow-x-auto max-h-52">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-surface-800">
-              <tr className="border-b border-white/10 text-left">
-                <th className="py-2 px-3 text-white/40 font-medium">From</th>
-                <th className="py-2 px-3 text-white/40 font-medium">Symbol</th>
-                <th className="py-2 px-3 text-white/40 font-medium">To</th>
+          <table className="light-table">
+            <thead>
+              <tr>
+                <th>From</th><th>Symbol</th><th>To</th>
               </tr>
             </thead>
             <tbody>
               {automaton.transitions.map((t, i) => (
-                <tr key={i} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                  <td className="py-1.5 px-3 font-mono text-cyan-300">
+                <tr key={i}>
+                  <td className="mono">
                     {automaton.accepting.includes(t.from) ? '★ ' : ''}q{t.from}
                   </td>
-                  <td className="py-1.5 px-3 font-mono">
+                  <td className="mono">
                     {t.symbol === 'ε'
-                      ? <span className="text-purple-300">ε</span>
-                      : <span className="text-amber-300">{t.symbol}</span>}
+                      ? <span>{t.symbol}</span>
+                      : <span>{t.symbol}</span>}
                   </td>
-                  <td className="py-1.5 px-3 font-mono text-cyan-300">
+                  <td className="mono">
                     {automaton.accepting.includes(t.to) ? '★ ' : ''}q{t.to}
                   </td>
                 </tr>
@@ -53,7 +51,7 @@ function AutomataTable({ automaton }: { automaton: Automaton }) {
             </tbody>
           </table>
         </div>
-        <p className="text-[10px] text-white/20 mt-2">★ = accepting state</p>
+        <p className="subtle" style={{ fontSize: 11 }}>★ = accepting state</p>
       </div>
     </div>
   )
@@ -79,17 +77,13 @@ export default function AutomataTab({
   return (
     <div className="space-y-4">
       {/* Automaton type tabs */}
-      <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/10 pb-3">
-        <div className="flex gap-2">
+      <div className="automata-switch">
+        <div className="switch-group">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setActive(t.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                active === t.id
-                  ? 'bg-brand-600 text-white'
-                  : 'text-white/40 hover:text-white/70'
-              }`}
+              className={`switch-button ${active === t.id ? 'active' : ''}`}
             >
               {t.label}
               <span className="ml-1.5 text-[10px] opacity-60">{t.data.states.length}q</span>
@@ -98,14 +92,12 @@ export default function AutomataTab({
         </div>
 
         {/* Graph / Table toggle */}
-        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+        <div className="view-toggle">
           {(['graph', 'table'] as const).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1 rounded text-xs transition-all ${
-                view === v ? 'bg-brand-600 text-white' : 'text-white/40 hover:text-white/60'
-              }`}
+              className={`switch-button ${view === v ? 'active' : ''}`}
             >
               {v === 'graph' ? '⬡ Graph' : '≡ Table'}
             </button>
